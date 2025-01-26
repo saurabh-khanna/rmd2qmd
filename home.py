@@ -37,46 +37,82 @@ st.set_page_config(page_icon = "👾", page_title="RMD to QMD Converter", layout
 st.title("👾 RMD to QMD Converter")
 st.write("&nbsp;")
 
-# File uploader for RMD files
-uploaded_file = st.file_uploader("Upload your RMD file")
 
-if uploaded_file is not None:
-    # Extract the uploaded file name without extension
-    input_filename = uploaded_file.name
-    output_filename = input_filename.replace(".Rmd", ".qmd")
+tab1, tab2 = st.tabs(["File level", "Text level"])
 
-    # Read and decode uploaded file
-    rmd_content = uploaded_file.read().decode("utf-8")
 
-    # Convert RMD content to QMD
-    qmd_content = convert_rmd_to_qmd(rmd_content)
+with tab1:
+    # File uploader for RMD files
+    uploaded_file = st.file_uploader("Upload your RMD file")
 
-    # Generate differences for highlighting
-    diff_content = generate_diff(rmd_content, qmd_content)
+    if uploaded_file is not None:
+        # Extract the uploaded file name without extension
+        input_filename = uploaded_file.name
+        output_filename = input_filename.replace(".Rmd", ".qmd")
 
-    # Provide a download button for the converted QMD file
-    st.download_button(
-        label="Download QMD file",
-        data=qmd_content,
-        file_name=output_filename,
-        mime="text/markdown"
-    )
+        # Read and decode uploaded file
+        rmd_content = uploaded_file.read().decode("utf-8")
 
-    # Display the content in three columns
-    col1, col2, col3 = st.columns(3)
+        # Convert RMD content to QMD
+        qmd_content = convert_rmd_to_qmd(rmd_content)
 
-    with col1:
-        st.header("RMD File Content")
-        st.code(rmd_content, language="markdown", wrap_lines=True)
+        # Generate differences for highlighting
+        diff_content = generate_diff(rmd_content, qmd_content)
 
-    with col2:
-        st.header("QMD File Content")
-        st.code(qmd_content, language="markdown", wrap_lines=True)
+        # Provide a download button for the converted QMD file
+        st.download_button(
+            label="Download QMD file",
+            data=qmd_content,
+            file_name=output_filename,
+            mime="text/markdown"
+        )
 
-    with col3:
-        st.header("Highlighted Differences")
-        st.code(diff_content, language="diff", wrap_lines=True)
+        # Display the content in three columns
+        col1, col2, col3 = st.columns(3)
 
-else:
-    # Inform the user to upload a file if none is provided
-    st.info("Please upload your RMD file to begin the conversion.")
+        with col1:
+            st.header("RMD File Content")
+            st.code(rmd_content, language="markdown", wrap_lines=True)
+
+        with col2:
+            st.header("QMD File Content")
+            st.code(qmd_content, language="markdown", wrap_lines=True)
+
+        with col3:
+            st.header("Highlighted Differences")
+            st.code(diff_content, language="diff", wrap_lines=True)
+
+    else:
+        # Inform the user to upload a file if none is provided
+        st.info("Please upload your RMD file to begin the conversion.")
+
+with tab2:
+    
+    def apply_regex(code, find_pattern, replace_pattern):
+        try:
+            modified_code = re.sub(find_pattern, replace_pattern, code, flags=re.MULTILINE)
+            return modified_code
+        except re.error as e:
+            return f"Regex Error: {e}"
+
+    st.write("Enter your text and specify a regex pattern to modify it.")
+
+    # Default regex values
+    default_find = r'```\{r ([\S\s]*?),.*fig\.cap="([\S\s]*?)".*\n^#[\S\s]*?knitr::include_app\("([\S\s]*?)", (height="[0-9]{3}px")\)\n```'
+    default_replace = r'::: {#fig-\1}\n\n```{=html}\n<iframe src="\3" width="100%" \4 style="border:none;">\n</iframe>\n``` \n\2\n:::'
+    
+    # Input fields
+    code = st.text_area("Paste your text:")
+    find_pattern = st.text_input("Regex Find Pattern:", default_find)
+    replace_pattern = st.text_input("Regex Replace Pattern:", default_replace)
+
+    if st.button("Apply Regex", type="primary"):
+        if not code:
+            st.warning("Please enter some text.")
+        elif not find_pattern:
+            st.warning("Please enter a regex find pattern.")
+        else:
+            modified_code = apply_regex(code, find_pattern, replace_pattern)
+            st.subheader("Modified Text:")
+            st.code(modified_code, language='r')
+
